@@ -1,0 +1,21 @@
+[submodule "extern/mathplot"]
+	path = extern/mathplot
+	url = https://github.com/sebsjames/mathplot
+[submodule "extern/oces_viewer"]
+	path = extern/oces_viewer
+	url = https://github.com/BrainBeatsBrawn/oces_viewer
+[submodule "extern/craysim"]
+	path = extern/craysim
+	url = https://github.com/BrainBeatsBrawn/craysim.git
+[submodule "extern/tinygltf"]
+	path = extern/tinygltf
+	url = https://github.com/sebsjames/tinygltf
+[submodule "extern/maths"]
+	path = extern/maths
+	url = https://github.com/sebsjames/maths
+[submodule "extern/json"]
+	path = extern/json
+	url = https://github.com/nlohmann/json
+[submodule "extern/cater_helpers"]
+	path = extern/cater_helpers
+	url = https://github.com/BrainBeatsBrawn/cater_helpers
