@@ -53,170 +53,16 @@ std::int32_t main (std::int32_t argc, char* argv[])
     v.diffuse_position = { 5, 5, -15 };
 
     // Label options
-    v.sim_opts.set (craysim::options::show_fps, false);
+    v.sim_opts.set (craysim::options::show_fps, true);
     v.sim_opts.set (craysim::options::show_movenum, false);
     v.fps_label_update_period = 1u;
 
-    // Uncomment to save out 3D version of csv_positions as a CSV file
-    v.sim_opts.set (craysim::options::save_csv_positions, true);
-
-    std::uint32_t antid = 0u;
-    std::uint32_t routeidx = 0u;
-
-    // Some extra options for antpov only
-    bool colour_by_route = false; // colour by route or ant?
-    bool apply_colour_labels = false;
-    for (std::int32_t i = 0; i < argc; i++) {
-        std::string arg = std::string(argv[i]);
-        if (arg == "-R") {
-            colour_by_route = true; // I have a slightly hacky way to colour by route ID
-        } else if (arg == "-L") {
-            apply_colour_labels = true; // Set true to apply green-for-bush; grey-for-invisible
-        }
-    }
-    std::cout << "We are colouring ant trail by " << (colour_by_route ? "forage/run" : "ant") << std::endl;
-
-    // csv reading (comes between find_landscape and setup_landscape)
-    if (v.sim_opts.test (craysim::options::path_from_csv)) {
-        // Check if path encodes several paths
-        std::vector<std::string> cpaths = mplot::tools::stringToVector (prog_opts.csv_path, ",");
-        // Use cater::helpers::read_csv instead of craysim::read_csv as we are also reading flags
-        // Note that v.csv_positions is populated.
-        for (auto cpath : cpaths) {
-
-            std::cout << "Reading csv path " << cpath << std::endl;
-            if (cpath.find ("Ant12") != std::string::npos) {
-                antid = 12;
-            } else if (cpath.find ("Ant11") != std::string::npos) {
-                antid = 11;
-            } else if (cpath.find ("Ant06") != std::string::npos) {
-                antid = 6;
-            } else if (cpath.find ("Ant03") != std::string::npos) {
-                antid = 3;
-            }
-
-            // Get Ant index from position p to posn before 'R'
-            std::string::size_type lstart = cpath.find ("Ant") + 3;
-            std::string::size_type lend = cpath.find ("R", lstart);
-            if (lend == std::string::npos) {
-                lend = cpath.find ("Z", lstart);
-            }
-            if (lend == std::string::npos) {
-                std::cout << "Uh oh\n";
-                return -1;
-            }
-            if (cpath.find("ZVOP") != std::string::npos) {
-                // ZVOP Zero Vector Opposite Side - Ant is allowed to go to nest but before arrival is
-                // placed in opposite side of the feeding areay
-                routeidx = 9999;
-            } else if (cpath.find("ZVSF") != std::string::npos) {
-                // ZVOP Zero Vector Semi Familiar - Ant is allowed to go to nest but before arrival is
-                // placed near but not at the feeding area
-                routeidx = 8888;
-            } else if (cpath.find("ZVF") != std::string::npos) {
-                // ZVOP Zero Vector Familiar - Ant is allowed to go to nest but before arrival is
-                // placed back at the feeding area
-                routeidx = 999;
-            } else {
-                std::string::size_type iend = cpath.find_first_of ('_');
-                routeidx = std::stoi (cpath.substr (lend + 1, iend - (lend + 1)));
-            }
-            std::cout << "Route index: " << routeidx << std::endl;
-
-            std::uint64_t existing = v.csv_positions.size();
-
-            std::uint32_t _routeidx = std::numeric_limits<std::uint32_t>::max(); // colour-by-antid is default
-            if (colour_by_route) { _routeidx = routeidx; }
-
-            if (cater::helpers::read_csv (cpath, v.csv_positions, v.csv_flags, antid, _routeidx) == false) {
-                throw std::runtime_error ("Failed to read CSV file");
-            } else { std::cout << "Read " << (v.csv_positions.size() - existing) << " ant positions from CSV\n"; }
-        }
-
-        // Now process the positions to generate directions.
-        std::uint32_t block = 3;
-        float max_delta_phi = 2.8f;
-        sm::vvec<sm::vec<float, 2>> dirns (v.csv_positions.size(), sm::vec<float, 2>{}); // dummy, unused
-        cater::helpers::process_positions<false, true> (v.csv_positions, v.csv_flags, dirns, block, max_delta_phi);
-        // for each antflag, set dirn uncertain flag
-    }
-    v.setup_breadcrumbs (32000); // enough to show a whole path/all paths from csv
+    // Snip csv path reading
+    v.setup_breadcrumbs (6000);
     v.bc_mult = 2.0f; // 1 is default
     v.breadcrumb_every = 10;
-
-    // Turn antflags into colour info, all at the start:
-    sm::flags<cater::helpers::antflags> aflags;
-    v.bc_clr.resize (1 + v.csv_flags.size() / v.breadcrumb_every);
-    v.bc_alpha.resize (1 + v.csv_flags.size() / v.breadcrumb_every);
-    v.bc_scale.resize (1 + v.csv_flags.size() / v.breadcrumb_every);
-    std::uint32_t i = 0;
-    for (std::uint32_t j = 0; j < v.csv_flags.size(); ++j) {
-        if (j % v.breadcrumb_every == 0u) {
-            aflags = v.csv_flags[j];
-            // Use a 'base ant index' colour:
-            if (aflags.test (cater::helpers::antflags::ant15)) { // There was no ant 15, this is used to flag for ZVF colour
-                v.bc_clr[i] = mplot::colour::bisque2; // ZVF. A white.
-            } else if (aflags.test (cater::helpers::antflags::ant14)) { // Hack to colour by routeID 1
-                v.bc_clr[i] = mplot::colour::sandybrown;
-            } else if (aflags.test (cater::helpers::antflags::ant13)) { // routeID 2
-                v.bc_clr[i] = mplot::colour::orangered2;
-                // routeID 3 is darkorange2 (ant12), so that works for both colour schemes
-                // routeID 4 is coral2 (maroon2 if ant11)
-
-            } else if (aflags.test (cater::helpers::antflags::ant10)) { // routeID 5
-                v.bc_clr[i] = mplot::colour::tan1;
-            } else if (aflags.test (cater::helpers::antflags::ant9)) { // routeID 6
-                v.bc_clr[i] = mplot::colour::chocolate3;
-            } else if (aflags.test (cater::helpers::antflags::ant8)) { // routeID 7
-                v.bc_clr[i] = mplot::colour::cadmiumorange;
-            } else if (aflags.test (cater::helpers::antflags::ant7)) { // routeID 8
-                v.bc_clr[i] = mplot::colour::sienna2;
-
-            } else if (aflags.test (cater::helpers::antflags::ant3)) {
-                v.bc_clr[i] = mplot::colour::dodgerblue3;
-            } else if (aflags.test (cater::helpers::antflags::ant6)) {
-                v.bc_clr[i] = mplot::colour::springgreen2;
-            } else if (aflags.test (cater::helpers::antflags::ant11)) {
-                if (colour_by_route) {
-                    v.bc_clr[i] = mplot::colour::coral2;
-                } else {
-                    v.bc_clr[i] = mplot::colour::maroon2;
-                }
-            } else if (aflags.test (cater::helpers::antflags::ant12)) {
-                v.bc_clr[i] = mplot::colour::darkorange2;
-            } else {
-                // Default to Out/back colour selection (ant0)
-                v.bc_clr[i] = aflags.test (cater::helpers::antflags::cookie) ? mplot::colour::deepskyblue2 : mplot::colour::flesh;
-            }
-            if (apply_colour_labels) {
-                if (aflags.test (cater::helpers::antflags::direction_uncertain)) {
-                    v.bc_clr[i] = mplot::colour::grey40;
-                } else if (aflags.test (cater::helpers::antflags::invisible)) {
-                    v.bc_clr[i] = mplot::colour::grey60;
-                } else if (aflags.test (cater::helpers::antflags::bush)) {
-                    v.bc_clr[i] = mplot::colour::darkgreen;
-                }
-            }
-            if (i % 2 == 0) {
-                v.bc_alpha[i] = 1.0f;
-                v.bc_scale[i] = 1.0f;
-            } else {
-                v.bc_alpha[i] = 1.0f;
-                v.bc_scale[i] = 1.0f;
-            }
-            ++i;
-        }
-    }
     // Once CSV has been read (if you are using that feature) do some setup on the landscape
     v.setup_landscape();
-
-    constexpr bool hide_land = false;
-    if constexpr (hide_land == true) {
-        // In special case, may want to hide landscape (and vegetation)
-        v.hide_landscape ("vegetation_inner_alternative");
-        // And set a white background
-        v.bgcolour = {1, 1, 1, 0};
-    }
 
     // From cmd line output (after ctrl-z) set the initial view
     v.setSceneTrans (sm::vec<float,3>{ float{0.682335}, float{0.47893}, float{-8.38334} });
@@ -230,20 +76,10 @@ std::int32_t main (std::int32_t argc, char* argv[])
     veye.setSceneTrans (sm::vec<float,3>{ float{-0.00859182}, float{-0.616208}, float{-1.18557} });
     veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
 
-    // Enable a special mode to make a short video of ant head in same orientation as a photographed ant
-    constexpr bool seeing_what_they_see_format = false;
-    std::int32_t vant_x = seeing_what_they_see_format ? 1920 : 920;
-    // A window for the Ant body view (or cylindrical eye)
-    mplot::Visual<glver> vant (vant_x, vant_x, "Ant view");
-    if constexpr (!seeing_what_they_see_format) {
-        // Original orientation of ant head in videos
-        vant.setSceneTrans (sm::vec<float,3>{ float{0.113123}, float{0.0217872}, float{-3.7961} });
-        vant.setSceneRotation (sm::quaternion<float>{ float{0.937372}, float{0.106131}, float{0.330499}, float{0.0289824} });
-    } else {
-        // Orientation to match a slide where our ant is set next to a photo of a real ant head
-        vant.setSceneTrans (sm::vec<float,3>{ float{-0.213751}, float{0.446347}, float{-4.42643} });
-        vant.setSceneRotation (sm::quaternion<float>{ float{0.774197}, float{0.444591}, float{-0.447665}, float{0.0505289} });
-    }
+    // A window for the Ant body view
+    mplot::Visual<glver> vant (920, 920, "Ant view");
+    vant.setSceneTrans (sm::vec<float,3>{ float{0.113123}, float{0.0217872}, float{-3.7961} });
+    vant.setSceneRotation (sm::quaternion<float>{ float{0.937372}, float{0.106131}, float{0.330499}, float{0.0289824} });
 
     // Load the eye hexgrid, if it is needed
     sm::hexgrid<float> eye_hexgrid;
@@ -304,32 +140,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     mplot::GridVisual<float, std::uint32_t, float, glver>* gv1p = nullptr;
     craysim::compoundray::ommatidia_datamodel<glver>* ep2 = nullptr;
 
-    sm::vec<float, 2> dx = { 0.0035f, 0.003f };
-    sm::vec<float, 2> nul = { 0.0f, 0.0f };
-    std::uint32_t cyl_w = 360; // must match cyl.eye
-    std::uint32_t cyl_h = 90;
-    sm::grid g1(cyl_w, cyl_h, dx, nul, sm::griddomainwrap::horizontal, sm::gridorder::bottomleft_to_topright);
-
-    // Showing a cylindrical representation, if it is present
-    if (v.efpaths.size() > 1 && v.efpaths[1].find ("cyl.eye") != std::string::npos) {
-        // We have a 2D cylindrical representation in camera 1. Make a GridVisual.
-        auto gv1 = std::make_unique<mplot::GridVisual<float, std::uint32_t, float, glver>>(&g1, sm::vec<>{-g1.width_of_pixels() / 2.0f, 1, 0});
-        gv1->set_parent (veye.get_id());
-        gv1->gridVisMode = mplot::GridVisMode::RectInterp;
-        gv1->setVectorData (reinterpret_cast<std::vector<sm::vec<float>>*>(&v.ommatidia_datas[1]));
-        gv1->cm.setType (mplot::ColourMapType::RGB);
-        gv1->setGamma (0.45f);
-        gv1->zScale.set_params (0, 0); // As it's an image, we don't want relief, so set the zScale to have a zero gradient
-        gv1->twodimensional (twodee);
-        gv1->finalize();
-        gv1p = veye.addVisualModel (gv1);
-        gv1p->scaleViewMatrix (1);
-
-        veye.setSceneTrans (sm::vec<float,3>{ float{-0.0245425}, float{-0.876597}, float{-1.56183} });
-        veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
-    }
-
-    // 2D eye representation (goes in the other window)
+    // 2D eye representation
     auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (sm::vec<>{}, &v.ommatidia_datas[0], v.get_ommatidia_ptr(0));
     eyevm2->set_parent (veye.get_id());
     eyevm2->name = "2D Ant Eyes";
@@ -395,73 +206,17 @@ std::int32_t main (std::int32_t argc, char* argv[])
         }
     }
 
-    if (prog_opts.make_movie) {
-        std::filesystem::create_directories (std::format ("./movies/Ant{:02d}R{:02d}/scene", antid, routeidx));
-        std::filesystem::create_directories (std::format ("./movies/Ant{:02d}R{:02d}/ant", antid, routeidx));
-        std::filesystem::create_directories (std::format ("./movies/Ant{:02d}R{:02d}/eyes", antid, routeidx));
-    }
-
     // The main program loop
     while (!(v.readyToFinish() || vant.readyToFinish() || veye.readyToFinish())) {
         v.start_loop_timer(); // It's important to call this line at the start of the loop
 
-        if (v.move_counter < v.csv_flags.size()) {
-            // Greyscale the eyes when we're in a section that was marked invisible
-            if (ep2 != nullptr) {
-                ep2->greyscale ((v.csv_flags[v.move_counter] & 8u) == 8u ? true : false);
-            }
-            // Also the ant head/eyes and body
-            ep1->greyscale ((v.csv_flags[v.move_counter] & 8u) == 8u ? true : false);
-            ant_ptr1->greyscale ((v.csv_flags[v.move_counter] & 8u) == 8u ? true : false);
-        } else {
-            if (ep2 != nullptr) { ep2->greyscale (false); }
-            // Also the ant head/eyes and body
-            ep1->greyscale (false);
-            ant_ptr1->greyscale (false);
-        }
         v.render_and_poll(); // Does all the render computations
-
-        // How to access the eye data.
-        //
-        // In this program, we pass the eye data to a mathplot VisualModel to be rendered on
-        // screen. However, we might want to save these data to a file, or pass them into a brain
-        // model. This is a description to get you started if you need to do this.
-        //
-        // It is placed here, after v.render_and_poll(), because in that function the new eye values
-        // will have been computed.
-        //
-        // Eye data lives in craysim_visual's v.ommatidia_datas which has type:
-        //
-        // std::map<std::uint32_t, std::vector<std::array<float, 3>>> ommatidia_datas;
-        //
-        // This structure is keyed by the compound-ray camera ID. In compound-ray cameras are
-        // specified in the glTF file, and so any camera may have any ID.
-        //
-        // In the Seville scene, ground_and_veg_inner_circular.gltf, the biologically realistic eye
-        // camera is always camera 0, i.e. v.ommatidia_datas[0].
-        //
-        // If the file has been modified so that there is also a cylindrical eye camera present,
-        // then that is expected (by this program) to be v.ommatidia_datas[1].
-        //
-        // v.ommatidia_datas[0] is std::vector<std::array<float, 3>> - a vector of RGB values, with
-        // one RGB for each ommatidium.
-        //
-        // Match the RGB values up with the ommatidia position information in craysim_visual's
-        // v.ommatidias which is a camera ID-keyed map of vectors of Ommatidium objects.
 
         if (gv1p != nullptr) {
             //gv1p->reinitColours();
             gv1p->setVectorData (reinterpret_cast<std::vector<sm::vec<float>>*>(&v.ommatidia_datas[1]));
             gv1p->reinit();
             gv1p->render();
-        }
-        // Save frames
-        if (prog_opts.make_movie && v.move_counter > 2) { // Ignore first couple of locations, as the system takes a couple of moves to get ready
-            if constexpr (seeing_what_they_see_format == false) {
-                v.saveImage (std::format ("./movies/Ant{:02d}R{:02d}/scene/{:06d}.pnm", antid, routeidx, v.move_counter));
-                veye.saveImage (std::format ("./movies/Ant{:02d}R{:02d}/eyes/{:06d}.pnm", antid, routeidx, v.move_counter));
-            }
-            vant.saveImage (std::format ("./movies/Ant{:02d}R{:02d}/ant/{:06d}.pnm", antid, routeidx, v.move_counter));
         }
 
         // Here is where you would work on the data for the last view in v.ommatidia_data;
@@ -470,50 +225,4 @@ std::int32_t main (std::int32_t argc, char* argv[])
     }
 
     v.complete_recording();
-
-    // Manually create 6D positions with flags
-    if (!v.csv_found_positions.empty() && !v.first_csv.empty()) {
-        std::string fp_filename = v.first_csv + ".6d.csv";
-        std::cout << "Write out found 3D positions and directions to " << fp_filename << "\n";
-        std::ofstream fout (fp_filename, std::ios::out | std::ios::trunc);
-        if (fout.is_open()) {
-            fout << "# x,y,z,dir_x,dir_y,dir_z,bush,cookie,shadow,invisible,dirn_uncertain\n";
-            std::uint32_t i = 0;
-            sm::vec<float> last_p = v.csv_found_positions[0];
-            sm::vec<float> last_d = {};
-            for (auto p : v.csv_found_positions) {
-                // Flags columns order originally was: Bush, Cookie, Shadow, Visibility; We add "Dirn Uncertain"
-                sm::flags<cater::helpers::antflags> aflags;
-                aflags = v.csv_flags[i];
-
-                // need to compute the 3D direction (giving ant pose) again.
-                sm::vec<float> pose_direction = {};
-                pose_direction = p - last_p;
-                last_p = p;
-                bool dirn_uncertain = pose_direction.length() < std::numeric_limits<float>::epsilon();
-                if (dirn_uncertain) {
-                    // Use last dirn
-                    pose_direction = last_d;
-                } else {
-                    pose_direction.renormalize();
-                    last_d = pose_direction;
-                }
-                fout << p.str_comma_separated() << ","
-                     << pose_direction.str_comma_separated() << ","
-                     << (aflags.test (cater::helpers::antflags::bush) ? "1" : "0") << ","
-                     << (aflags.test (cater::helpers::antflags::cookie) ? "1" : "0") << ","
-                     << (aflags.test (cater::helpers::antflags::shadow) ? "1" : "0") << ","
-                     << (aflags.test (cater::helpers::antflags::invisible) ? "1" : "0") << ","
-                     << (dirn_uncertain ? "1" : "0")
-                     << std::endl;
-
-                ++i;
-            }
-            fout.close();
-        } else {
-            std::cout << "Failed to open " << fp_filename << " to write out 3D csv positions\n";
-        }
-    } else {
-        std::cout << "No found positions to write out\n";
-    }
 }
