@@ -181,24 +181,22 @@ You can do this by adding another alternative for GCC 13 or you can simply delet
 sudo update-alternatives --remove-all gcc
 ```
 
-# Use Ant POV
-
-We hope that you'll want to experiment with our software, verify that our results are robust and even try to use *craysim* (the library that makes Ant POV possible) in your own projects.
+# Use the program
 
 ## Experimenting with the example environment
 
 Start by familiarising yourself with the capabilities of the software.
 
 ```bash
-cd ~/src/antpov
-./build/antpov -f ./data/natural_env.gltf
+cd ~/src/antmin
+./build/antmin -f ./data/natural_env.gltf
 ```
 
 Three windows should open. One shows the scene, with the ant to be found somewhere within the scene.
 Another shows a visualization of the ant's head and eyes, separate from the scene.
 The third windows shows a two dimensional representation of the ant's view.
 
-Arrange the windows so that you can see them all, and highlight the one titled 'AntPOV'.
+Arrange the windows so that you can see them all, and highlight the one entitled 'Scene'.
 This window processes keyboard-input.
 
 Let's find our ant. You can turn on a set of coordinate arrows that are centred on the ant by pressing 'c'.
@@ -214,37 +212,9 @@ The usual gaming 'wasd' keys move her forwards/backwards, left and right. Change
 
 A summary of all the key bindings is available if you press Ctrl-h (you will see the output in the terminal from which you started the program).
 
-## Reproducing the results in the paper
-
-To reproduce our results, you will need to download our Seville environment glTF file.
-This is not distributed along with the source code because it is too large (3.2 GB) for a github.com repository.
-Go to [Dataset: Reconstructing the visual histories of desert ants](https://doi.org/10.15131/shef.data.32860832), enter the folder **3. Reconstructing Ant Views**  and download **Seville_scanned_model.zip**. Unpack the zip file to obtain both the glTF (**ground_and_veg_inner_circular.gltf**) and the associated NavMesh file (**navmesh_4420489099394405100**). Place these files in antpov/data/seville/
-
-You can now run the scripts that will take the two-dimensional coordinates for the ant routes and project them into the three-dimensional Seville model.
-
-### Fig 1D
-
-```
-./scripts/four_paths/four_paths.sh
-```
-
-### Fig 3
-
-```
-./scripts/ant03/r01_top_down.sh
-```
-
-### Fig 4C
-
-```
-./scripts/ant12/r01_r02_zvf.sh
-```
-
-See also the [scripts README](https://github.com/BrainBeatsBrawn/antpov/tree/main/scripts).
-
 ## Make your own Insect POV
 
-The antpov program, with its ant- and application-specific functionality is only a few hundred lines of code.
+The antmin program, with its ant- and application-specific functionality is only a few hundred lines of code.
 All the functionality that allows you to place compound-ray eyes in a glTF-encoded scene, and to move the eyes over the surface of a landscape in that scene is held in (mostly C++ modular) libraries.
 [Compound-ray](https://github.com/BrainBeatsBrawn/compound-ray) provides the ray casting; [mathplot](https://github.com/sebsjames/mathplot) does OpenGL visualization; [craysim](https://github.com/BrainBeatsBrawn/craysim) binds it all together into a simulation.
 The idea is to make it easy to create new simulations.
@@ -252,8 +222,10 @@ A new simulation might feature different eye models, different behaviour and it 
 
 You can see the simplest possible craysim program here: [craysim_minimal](https://github.com/BrainBeatsBrawn/craysim_minimal).
 
+This repository extends craysim_minimal with ant-specific features.
+
 # Credits
 
-Ant POV was authored by Seb James.
+Antmin was authored by Seb James.
 Compound-ray was authored by Blayze Millward, with modifications by Seb James.
 Alex Blenkinsop contributed to sebsjames/maths and to craysim.
