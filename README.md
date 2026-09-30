@@ -48,7 +48,7 @@ sudo apt install build-essential git \
                  libxi-dev libglfw3-dev libfreetype-dev libhdf5-dev
 ```
 
-* Compound-ray needs nvidia-cuda-toolkit, which installs the NVIDIA GPU compiler nvcc.
+* Compound-ray needs nvidia-cuda-toolkit, which installs the NVIDIA GPU compiler nvcc. Note that you *may* need to manually install CUDA toolkit version 13, instead of using this package managed version. If the package managed version is CUDA 12 (the case if you are on Ubuntu 24) then you *will* need to manually install CUDA 13 to use OptiX 9.1. Alternatively, you can use OptiX 8.0 and compile against CUDA 12 (to compile compound-ray against OptiX 8/CUDA 12 you will need to use gcc 12!).
 * Clang-20 and ninja are used to compile antmin.
 * The libraries freeglut3-dev to libhdf5-dev are required by craysim/mathplot for OpenGL visualizations.
 
