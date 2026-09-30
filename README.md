@@ -42,15 +42,13 @@ The following packages are required to build antmin:
 
 ```bash
 sudo apt install build-essential git \
-                 gcc-12 g++-12 \
                  nvidia-cuda-toolkit \
                  clang-20 clang-tools-20 libc++-20-dev ninja-build \
                  freeglut3-dev libglu1-mesa-dev libxmu-dev \
                  libxi-dev libglfw3-dev libfreetype-dev libhdf5-dev
 ```
 
-* GCC 12 and gmake (from build-essential) is used to compile compound-ray.
-* Compound-ray also needs nvidia-cuda-toolkit, which installs the NVIDIA GPU compiler nvcc.
+* Compound-ray needs nvidia-cuda-toolkit, which installs the NVIDIA GPU compiler nvcc.
 * Clang-20 and ninja are used to compile antmin.
 * The libraries freeglut3-dev to libhdf5-dev are required by craysim/mathplot for OpenGL visualizations.
 
@@ -94,39 +92,21 @@ Compound-ray was written by Blayze Millward ([original code](https://github.com/
 
 ### NVIDIA OptiX SDK
 
-You will need to register a developer account with NVIDIA and download the [NVIDIA OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) SDK, version 8.0 from the [Legacy Downloads page](https://developer.nvidia.com/designworks/optix/downloads/legacy).
+You will need to register a developer account with NVIDIA and download the [NVIDIA OptiX](https://developer.nvidia.com/rtx/ray-tracing/optix) SDK, version 9.1 from the [Legacy Downloads page](https://developer.nvidia.com/designworks/optix/downloads/legacy).
 
-After downloading, you should have obtained the installer shellscript file **NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh**. We'll assume it's in ~/Downloads/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh.
+After downloading, you should have obtained the installer shellscript file **NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64.sh**. We'll assume it's in ~/Downloads/NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64.sh.
 
 Unpack the file into ~/src:
 
 ```bash
 mkdir -p ~/src
 cd src
-bash ~/Downloads/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64.sh
+bash ~/Downloads/NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64.sh
 ```
 
 Page down to accept the licence agreement, and then you should be prompted to install in the default location in src/.
 Accept the default.
-You should now have a directory **~/src/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64** containing the NVIDIA OptiX SDK.
-
-### Temporarily switch your default compiler to GCC 12
-
-With some build systems, you can specify the compiler version with the environment variables `CC` and `CXX`. For some reason, this does not work here, and instead we have to use the `update-alternatives` system (a Debian/Ubuntu thing) to switch our default compiler from GCC 13 to the OptiX 8.0-compatible GCC 12.
-
-```bash
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12 --slave /usr/bin/g++ g++ /usr/bin/g++-12 --slave /usr/bin/gcov gcov /usr/bin/gcov-12
-```
-
-Verify that g++ is version 12:
-
-```bash
-seb@ubu24-vm1:~$ g++ --version
-g++ (Ubuntu 12.4.0-2ubuntu1~24.04.1) 12.4.0
-Copyright (C) 2022 Free Software Foundation, Inc.
-This is free software; see the source for copying conditions.  There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-```
+You should now have a directory **~/src/NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64** containing the NVIDIA OptiX SDK.
 
 ### Obtain and compile compound-ray
 
@@ -134,7 +114,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 cd ~/src
 git clone https://github.com/BrainBeatsBrawn/compound-ray
 cd compound-ray/build
-cmake .. -DOptiX_INSTALL_DIR=~/src/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64
+cmake .. -DOptiX_INSTALL_DIR=~/src/NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64
 make
 sudo make install # Installs in /usr/local
 ```
@@ -162,7 +142,7 @@ just as you did for compound-ray and specifying that clang++-20 and ninja should
 ```bash
 mkdir build
 cd build
-CC=clang-20 CXX=clang++-20 cmake .. -GNinja -DOptiX_INSTALL_DIR=~/src/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64
+CC=clang-20 CXX=clang++-20 cmake .. -GNinja -DOptiX_INSTALL_DIR=~/src/NVIDIA-OptiX-SDK-9.1.0-linux64-x86_64
 ninja
 ```
 
@@ -170,15 +150,6 @@ That's it. Test by launching antmin with a bundled test environment:
 ```bash
 cd ~/src/antmin
 ./build/antmin -f ./data/natural_env.gltf
-```
-
-### Switch your compiler back
-
-Optionally, change your system back, so that the gcc and g++ commands involke the OS-default GCC 13.
-You can do this by adding another alternative for GCC 13 or you can simply delete the gcc alternative like this:
-
-```bash
-sudo update-alternatives --remove-all gcc
 ```
 
 # Use the program
