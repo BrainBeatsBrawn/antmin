@@ -37,7 +37,12 @@ std::int32_t main (std::int32_t argc, char* argv[])
     std::int32_t _w = prog_opts.w > 0 ? prog_opts.w : 1920;
     std::int32_t _h = prog_opts.h > 0 ? prog_opts.h : 1080;
     // Create a craysim main window to render the eye/sensor. This loads in the models from gltf file at path
-    craysim::visual<glver> v (_w, _h, "AntPOV", prog_opts);
+
+    // Default/initial samples per second for the compound-ray eye
+    constexpr std::int32_t default_samples = 512;
+    // We need gamma correction of colours in our EyeVisual
+    constexpr float gamma_val = 0.45f;
+    craysim::visual<glver> v (_w, _h, "AntPOV", prog_opts, default_samples, gamma_val);
     // Set the agent hoverheight from our inputs if necessary
     v.set_hoverheight (prog_opts.hovh, 0.002f); // 2 mm is good for C. velox model
     // Find the model from the glTF that you want to be the landscape
@@ -108,7 +113,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
         dhg->ommData = &v.ommatidia_datas[0];
         dhg->ommatidia = v.get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
         dhg->show_flat = false;
-        dhg->setGamma (0.45f);
+        dhg->setGamma (gamma_val);
         dhg->twodimensional (false);
         dhg->addMeshgroup (*v.get_head_mesh(0)); // Adds the ant head model
         dhg->finalize();
@@ -120,7 +125,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
         eyevm1->set_parent (vant.get_id());
         eyevm1->name = "Ant Eyes";
         eyevm1->show_3d = true;
-        eyevm1->setGamma (0.45f);
+        eyevm1->setGamma (gamma_val);
         eyevm1->addMeshgroup (*v.get_head_mesh(0));
         eyevm1->finalize();
         ep1 = vant.addVisualModel (eyevm1);
@@ -146,7 +151,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     eyevm2->name = "2D Ant Eyes";
     craysim::add_ant_eye_spherical_projection<glver> (v, eyevm2.get(), 0);
     eyevm2->show_3d = false;
-    eyevm2->setGamma (0.45f);
+    eyevm2->setGamma (gamma_val);
     eyevm2->twodimensional (twodee);
     eyevm2->show_sphere = false;
     eyevm2->show_rays = false;
@@ -165,7 +170,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
         dhg->show_flat = true; // couple of issues to solve here
         dhg->second_grid_flip_lr = true;   // flip the second grid left-right
         dhg->grid_offset = {0.00075f, 0}; // grid offset is applied in opposide senses to each grid
-        dhg->setGamma (0.45f);
+        dhg->setGamma (gamma_val);
         dhg->twodimensional (twodee);
         dhg->setViewMatrix (mflip);
         dhg->finalize();
