@@ -26,8 +26,7 @@ import craysim.doublehexgrid;
 
 import cater.helpers;
 
-// OpenGL 4.3 for Instanced VisualModels
-constexpr std::int32_t glver = mplot::gl::version_4_3;
+import antbrain.vision;
 
 std::int32_t main (std::int32_t argc, char* argv[])
 {
@@ -42,7 +41,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     constexpr std::int32_t default_samples = 512;
     // We need gamma correction of colours in our EyeVisual
     constexpr float gamma_val = 0.45f;
-    craysim::visual<glver> v (_w, _h, "AntPOV", prog_opts, default_samples, gamma_val);
+    craysim::visual<antbrain::glver> v (_w, _h, "AntPOV", prog_opts, default_samples, gamma_val);
     // Set the agent hoverheight from our inputs if necessary
     v.set_hoverheight (prog_opts.hovh, 0.002f); // 2 mm is good for C. velox model
     // Find the model from the glTF that you want to be the landscape
@@ -77,12 +76,12 @@ std::int32_t main (std::int32_t argc, char* argv[])
     v.setup_random_walk (1500, 150, 100.0f, 0.05f);
 
     // A window for the 2D eye view projection
-    mplot::Visual<glver> veye (920, 512, "Eye view");
+    mplot::Visual<antbrain::glver> veye (920, 512, "Eye view");
     veye.setSceneTrans (sm::vec<float,3>{ float{-0.00859182}, float{-0.616208}, float{-1.18557} });
     veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
 
     // A window for the Ant body view
-    mplot::Visual<glver> vant (920, 920, "Ant view");
+    mplot::Visual<antbrain::glver> vant (920, 920, "Ant view");
     vant.setSceneTrans (sm::vec<float,3>{ float{0.113123}, float{0.0217872}, float{-3.7961} });
     vant.setSceneRotation (sm::quaternion<float>{ float{0.937372}, float{0.106131}, float{0.330499}, float{0.0289824} });
 
@@ -106,9 +105,9 @@ std::int32_t main (std::int32_t argc, char* argv[])
 
     constexpr bool twodee = true;
 
-    craysim::compoundray::ommatidia_datamodel<glver>* ep1 = nullptr;
+    craysim::compoundray::ommatidia_datamodel<antbrain::glver>* ep1 = nullptr;
     if (v.sim_opts.test (craysim::options::eye_is_hex)) {
-        auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (&eye_hexgrid, sm::vec<>{0,0,0});
+        auto dhg = std::make_unique<craysim::doublehexgrid<antbrain::glver>> (&eye_hexgrid, sm::vec<>{0,0,0});
         dhg->set_parent (vant.get_id());
         dhg->ommData = &v.ommatidia_datas[0];
         dhg->ommatidia = v.get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
@@ -121,7 +120,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
         ep1->scaleViewMatrix (1000);
     } else {
         // Ant body, plotted in its own window; first the eyes for the body
-        auto eyevm1 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (sm::vec<>{}, &v.ommatidia_datas[0], v.get_ommatidia_ptr(0));
+        auto eyevm1 = std::make_unique<craysim::compoundray::EyeVisual<antbrain::glver>> (sm::vec<>{}, &v.ommatidia_datas[0], v.get_ommatidia_ptr(0));
         eyevm1->set_parent (vant.get_id());
         eyevm1->name = "Ant Eyes";
         eyevm1->show_3d = true;
@@ -133,23 +132,23 @@ std::int32_t main (std::int32_t argc, char* argv[])
         ep1->scaleViewMatrix (1000);
     }
     // The ant body for the separate window
-    auto av1 = std::make_unique<craysim::AntBodyVisual<glver>>();
+    auto av1 = std::make_unique<craysim::AntBodyVisual<antbrain::glver>>();
     av1->set_parent (vant.get_id());
     av1->draw_antennae = true;
     av1->draw_body = true;
     av1->finalize();
-    mplot::VisualModel<glver>* ant_ptr1 = vant.addVisualModel (av1);
+    mplot::VisualModel<antbrain::glver>* ant_ptr1 = vant.addVisualModel (av1);
     ant_ptr1->name = "ant";
     ant_ptr1->scaleViewMatrix (1000);
 
-    mplot::GridVisual<float, std::uint32_t, float, glver>* gv1p = nullptr;
-    craysim::compoundray::ommatidia_datamodel<glver>* ep2 = nullptr;
+    mplot::GridVisual<float, std::uint32_t, float, antbrain::glver>* gv1p = nullptr;
+    craysim::compoundray::ommatidia_datamodel<antbrain::glver>* ep2 = nullptr;
 
     // 2D eye representation
-    auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (sm::vec<>{}, &v.ommatidia_datas[0], v.get_ommatidia_ptr(0));
+    auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<antbrain::glver>> (sm::vec<>{}, &v.ommatidia_datas[0], v.get_ommatidia_ptr(0));
     eyevm2->set_parent (veye.get_id());
     eyevm2->name = "2D Ant Eyes";
-    craysim::add_ant_eye_spherical_projection<glver> (v, eyevm2.get(), 0);
+    craysim::add_ant_eye_spherical_projection<antbrain::glver> (v, eyevm2.get(), 0);
     eyevm2->show_3d = false;
     eyevm2->setGamma (gamma_val);
     eyevm2->twodimensional (twodee);
@@ -161,9 +160,9 @@ std::int32_t main (std::int32_t argc, char* argv[])
     ep2 = veye.addVisualModel (eyevm2);
     ep2->scaleViewMatrix (1000);
 
-    craysim::doublehexgrid<glver>* dhp = nullptr; // optional extra double hex of flat eyes
+    craysim::doublehexgrid<antbrain::glver>* dhp = nullptr; // optional extra double hex of flat eyes
     if (v.sim_opts.test (craysim::options::eye_is_hex)) {
-        auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (&eye_hexgrid, sm::vec<>{});
+        auto dhg = std::make_unique<craysim::doublehexgrid<antbrain::glver>> (&eye_hexgrid, sm::vec<>{});
         dhg->set_parent (veye.get_id());
         dhg->ommData = &v.ommatidia_datas[0];
         dhg->ommatidia = v.get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
@@ -179,7 +178,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     }
 
     // An ant body to go in the scene
-    auto av = std::make_unique<craysim::AntBodyVisual<glver>>();
+    auto av = std::make_unique<craysim::AntBodyVisual<antbrain::glver>>();
     av->set_parent (v.get_id());
     av->draw_ring = true;
     av->finalize();
@@ -201,13 +200,13 @@ std::int32_t main (std::int32_t argc, char* argv[])
     v.other_windows = { &vant, &veye };
     // Similar for our other eyes
     if (ep2 == nullptr) {
-        v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<glver>*>{ ep1 };
+        v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<antbrain::glver>*>{ ep1 };
     } else {
         if (dhp == nullptr) {
-            v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<glver>*>{ ep1, ep2 };
+            v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<antbrain::glver>*>{ ep1, ep2 };
         } else {
             std::cout << "Adding ep1, ep2 and dhp!\n";
-            v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<glver>*>{ ep1, ep2, dhp };
+            v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<antbrain::glver>*>{ ep1, ep2, dhp };
         }
     }
 

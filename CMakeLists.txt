@@ -31,14 +31,14 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/extern/craysim/cmake" ${CMAKE_MODUL
 # Path to the NVidia OptiX SDK directory e.g. ~/src/NVIDIA-OptiX-SDK-8.0.0-linux64-x86_64
 set(OptiX_INSTALL_DIR "${PROJECT_SOURCE_DIR}/../" CACHE PATH "Path to OptiX installed location.")
 
-# Find the libraries which will be needed in addition to compoundray (libEyeRenderer3.so)
-find_package(glfw3 REQUIRED)
-find_package(OpenGL REQUIRED)
-find_package(OpenMP) # (OpenMP may be used to build navmesh)
-find_package(Freetype REQUIRED)
-find_package(HDF5 REQUIRED)
-find_package(OptiX REQUIRED)
-find_package(compoundray REQUIRED)
+# Find the libraries which will be needed in addition to compoundray (libcompoundray.so)
+find_package(glfw3 REQUIRED)       #
+find_package(OpenGL REQUIRED)      # mathplot depends on these libs
+find_package(Freetype REQUIRED)    #
+find_package(OpenMP)               # OpenMP may be used to build navmesh
+find_package(HDF5 REQUIRED)        # The OCES reader module uses HDF to save hexgrids
+find_package(OptiX REQUIRED)       # The NVidia OptiX library does ray tracing/ray casting
+find_package(compoundray REQUIRED) # compoundray for compound eye rendering (using OptiX)
 
 # Where is mathplot? (allows headers and modules to be found)
 set(MPLOT_INCLUDE_PATH "${PROJECT_SOURCE_DIR}/extern/mathplot" CACHE PATH "The path to mathplot")
@@ -161,6 +161,7 @@ set(ANTMIN_MODULES
   ${PROJECT_SOURCE_DIR}/extern/mathplot/mplot/HexGridVisual.cppm
   ${PROJECT_SOURCE_DIR}/extern/mathplot/mplot/QuiverVisual.cppm
   ${PROJECT_SOURCE_DIR}/extern/mathplot/mplot/LengthscaleVisual.cppm
+  ${PROJECT_SOURCE_DIR}/src/antbrain_vision.cppm
 )
 list(REMOVE_DUPLICATES ANTMIN_MODULES)
 add_library(antmin_modules STATIC)
