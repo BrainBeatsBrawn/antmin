@@ -162,6 +162,7 @@ set(ANTMIN_MODULES
   ${PROJECT_SOURCE_DIR}/extern/mathplot/mplot/QuiverVisual.cppm
   ${PROJECT_SOURCE_DIR}/extern/mathplot/mplot/LengthscaleVisual.cppm
   ${PROJECT_SOURCE_DIR}/src/antbrain_vision.cppm
+  ${PROJECT_SOURCE_DIR}/src/antbody_vis.cppm
 )
 list(REMOVE_DUPLICATES ANTMIN_MODULES)
 add_library(antmin_modules STATIC)
