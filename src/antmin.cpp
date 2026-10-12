@@ -102,10 +102,10 @@ std::int32_t main (std::int32_t argc, char* argv[])
     veye.setSceneTrans (sm::vec<float,3>{ float{-0.00859182}, float{-0.616208}, float{-1.18557} });
     veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
 #if 0
-    // We will have:
+    // We will have (from module antbrain.vision):
     antbrain::hexvision vision_data (&v, etc);
 #endif
-    // Along with:
+    // Along with (also from module antbrain.vision):
     antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, v.eye_hexgrid_ptr);
 
     // This is a debug mechanism to replay and study a crashed movement on the NavMesh

@@ -40,11 +40,18 @@ export namespace antbrain
                               sm::vec<float> _grp_offset = {0.0f})
         {
             this->grp_offset = _grp_offset;
+            if (_v_craysim->sim_opts.test (craysim::options::eye_is_hex) == true) {
+                this->grp_offset += sm::vec<float>{0, 0.6f, 0}; // doublehexgrid plots lower than EyeVisual.
+            }
 
             sm::mat<float, 4> mflip (sm::quaternion<float>{0, 0, 1, 0});
+            // We apply grp_offset to the mflip matrix, as it will override any offset in the
+            // EyeVisual/doublehexgrid constructor
+            mflip.pretranslate (this->grp_offset);
+
             if (_v_craysim->sim_opts.test (craysim::options::eye_is_hex) == false) {
                 // EyeVisual can provide a 2D eye representation (on its own, with show_3d = false)
-                auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (this->grp_offset,
+                auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (sm::vec<>{},
                                                                                         &(_v_craysim->ommatidia_datas[0]),
                                                                                         _v_craysim->get_ommatidia_ptr(0));
                 eyevm2->set_parent (_veye->get_id());
@@ -62,13 +69,13 @@ export namespace antbrain
             } else {
                 // There can be an optional extra double hex of flat eyes if 'eye_is_hex'
                 if (eye_hexgrid != nullptr) {
-                    auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, this->grp_offset);
+                    auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, sm::vec<>{});
                     dhg->set_parent (_veye->get_id());
                     dhg->ommData = &_v_craysim->ommatidia_datas[0];
                     dhg->ommatidia = _v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
                     dhg->show_flat = true;                  // couple of issues to solve here
                     dhg->second_grid_flip_lr = true;       // flip the second grid left-right
-                    dhg->grid_offset = {0.00075f, 0};     // grid offset is applied in opposide senses to each grid
+                    dhg->grid_offset = {0.00075f, 0};     // grid offset is applied in opposite senses to each grid
                     dhg->setGamma (0.45f);
                     dhg->twodimensional (twodee);
                     dhg->setViewMatrix (mflip);
