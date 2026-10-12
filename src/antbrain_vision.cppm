@@ -61,19 +61,23 @@ export namespace antbrain
                 this->ep->scaleViewMatrix (1000);
             } else {
                 // There can be an optional extra double hex of flat eyes if 'eye_is_hex'
-                auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, this->grp_offset);
-                dhg->set_parent (_veye->get_id());
-                dhg->ommData = &_v_craysim->ommatidia_datas[0];
-                dhg->ommatidia = _v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
-                dhg->show_flat = true;                  // couple of issues to solve here
-                dhg->second_grid_flip_lr = true;       // flip the second grid left-right
-                dhg->grid_offset = {0.00075f, 0};     // grid offset is applied in opposide senses to each grid
-                dhg->setGamma (0.45f);
-                dhg->twodimensional (twodee);
-                dhg->setViewMatrix (mflip);
-                dhg->finalize();
-                this->ep = _veye->addVisualModel (dhg);
-                this->ep->scaleViewMatrix (1000);
+                if (eye_hexgrid != nullptr) {
+                    auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, this->grp_offset);
+                    dhg->set_parent (_veye->get_id());
+                    dhg->ommData = &_v_craysim->ommatidia_datas[0];
+                    dhg->ommatidia = _v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
+                    dhg->show_flat = true;                  // couple of issues to solve here
+                    dhg->second_grid_flip_lr = true;       // flip the second grid left-right
+                    dhg->grid_offset = {0.00075f, 0};     // grid offset is applied in opposide senses to each grid
+                    dhg->setGamma (0.45f);
+                    dhg->twodimensional (twodee);
+                    dhg->setViewMatrix (mflip);
+                    dhg->finalize();
+                    this->ep = _veye->addVisualModel (dhg);
+                    this->ep->scaleViewMatrix (1000);
+                } else {
+                    std::cerr << "eye_is_hex is true, but passed-in eye_hexgrid pointer is null\n";
+                }
             }
         }
 

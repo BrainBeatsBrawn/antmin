@@ -32,7 +32,7 @@ export namespace antbody
         {
             // Could get eye_hexgrid from v_craysim
 
-            if (v_craysim->sim_opts.test (craysim::options::eye_is_hex)) {
+            if (v_craysim->sim_opts.test (craysim::options::eye_is_hex) && eye_hexgrid != nullptr) {
                 auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, sm::vec<>{});
                 dhg->set_parent (vant->get_id());
                 dhg->ommData = &v_craysim->ommatidia_datas[0];

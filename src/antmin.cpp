@@ -28,7 +28,7 @@ import cater.helpers;
 import antbrain.vision;
 import antbody.vis;
 
-namespace ant
+namespace antmin
 {
     // OpenGL 4.3 for Instanced VisualModels
     constexpr std::int32_t glver = mplot::gl::version_4_3;
@@ -47,7 +47,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     constexpr std::int32_t default_samples = 512;
     // We need gamma correction of colours in our EyeVisual
     constexpr float gamma_val = 0.45f;
-    craysim::visual<ant::glver> v (_w, _h, "AntPOV", prog_opts, default_samples, gamma_val);
+    craysim::visual<antmin::glver> v (_w, _h, "AntPOV", prog_opts, default_samples, gamma_val);
     // Set the agent hoverheight from our inputs if necessary
     v.set_hoverheight (prog_opts.hovh, 0.002f); // 2 mm is good for C. velox model
     // Find the model from the glTF that you want to be the landscape
@@ -82,7 +82,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     v.setup_random_walk (1500, 150, 100.0f, 0.05f);
 
     // Add an ant body to go in the scene
-    auto av = std::make_unique<craysim::AntBodyVisual<ant::glver>>();
+    auto av = std::make_unique<craysim::AntBodyVisual<antmin::glver>>();
     av->set_parent (v.get_id());
     av->draw_ring = true;
     av->finalize();
@@ -90,36 +90,15 @@ std::int32_t main (std::int32_t argc, char* argv[])
     v.agent_body->name = "ant";
     v.agent_body->setViewMatrix (v.initial_camera_space);
 
-    // Load the eye hexgrid, if it is needed. The eye_hexgrid file is created by the OCES reader,
-    // which generates both a .heye file and a .h5 file when it reads its .gltf main document. This
-    // hexgrid only exists if the OCES reader loaded the .heye file. I think. This hexgrid could be provided by craysim?
-    sm::hexgrid<float> eye_hexgrid;
-    if (v.sim_opts.test (craysim::options::eye_is_hex)) {
-        // read eye_hexgrid from eyefilenamebase.h5... then:
-        std::string eye_hexgrid_path = {};
-        if (v.efpaths.empty()) {
-            std::cout << "No efpaths yet...\n";
-        } else {
-            std::cout << "v.efpaths[0] = " << v.efpaths[0] << "\n";
-            eye_hexgrid_path = v.efpaths[0];
-            mplot::tools::stripFileSuffix (eye_hexgrid_path);
-            eye_hexgrid_path += ".h5";
-            std::cout << "eye_hexgrid_path = " << eye_hexgrid_path << "\n";
-        }
-        sm::hexgrid_load (eye_hexgrid, eye_hexgrid_path);
-        std::cout << "eye_hexgrid has " << eye_hexgrid.num() << " hexes\n";
-    }
-
-    // A window for the Ant body view
-    mplot::Visual<ant::glver> vant (920, 920, "Ant view");
+    // Make a second window for a fixed ant body view
+    mplot::Visual<antmin::glver> vant (920, 920, "Ant view");
     vant.setSceneTrans (sm::vec<float,3>{ float{0.113123}, float{0.0217872}, float{-3.7961} });
     vant.setSceneRotation (sm::quaternion<float>{ float{0.937372}, float{0.106131}, float{0.330499}, float{0.0289824} });
-    // A visualizer class to bundle up the work of drawing the ant.
-    antbody::visualizer<ant::glver> antbody_vis (&v, &vant, &eye_hexgrid);
+    // Use a visualizer class to bundle up the work of drawing the ant
+    antbody::visualizer<antmin::glver> antbody_vis (&v, &vant, v.eye_hexgrid_ptr);
 
-
-    // A window for the 2D eye view projection. Becomes 'eye visualizer'
-    mplot::Visual<ant::glver> veye (920, 512, "Eye view");
+    // Make a third window for views of the eyes on their own
+    mplot::Visual<antmin::glver> veye (920, 512, "Eye view");
     veye.setSceneTrans (sm::vec<float,3>{ float{-0.00859182}, float{-0.616208}, float{-1.18557} });
     veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
 #if 0
@@ -127,9 +106,9 @@ std::int32_t main (std::int32_t argc, char* argv[])
     antbrain::hexvision vision_data (&v, etc);
 #endif
     // Along with:
-    antbrain::hexvision_visualizer<ant::glver> eyes_vis (&v, &veye, &eye_hexgrid);
+    antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, v.eye_hexgrid_ptr);
 
-    // how we replay a crashed movement for debug
+    // This is a debug mechanism to replay and study a crashed movement on the NavMesh
     if (v.sim_opts.test (craysim::options::debug_mv)) {
         try {
             v.do_crashed_movement();
@@ -139,14 +118,13 @@ std::int32_t main (std::int32_t argc, char* argv[])
         }
     }
 
-    // Put all our 'other windows' in a container, which we pass in to render_and_poll()
+    // Put all our 'other windows' into the 'other_windows' container in craysim::visual. This
+    // ensures they see a render() call for each call to render_and_poll().
     v.other_windows = { &vant, &veye };
-    // Similar for our other eyes
-    if (eyes_vis.ep == nullptr) {
-        v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<ant::glver>*>{ antbody_vis.ep1 };
-    } else {
-        v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<ant::glver>*>{ antbody_vis.ep1, eyes_vis.ep };
-    }
+    // Put our 'other eyes' (these are separate representations of the same eye-view data that is
+    // shown as the agent within the scene) in the 'other_eyes' container.
+    v.other_eyes[0] = std::vector<craysim::compoundray::ommatidia_datamodel<antmin::glver>*>{ antbody_vis.ep1 };
+    if (eyes_vis.ep != nullptr) { v.other_eyes[0].push_back (eyes_vis.ep); }
 
     // The main program loop
     while (!(v.readyToFinish() || vant.readyToFinish() || veye.readyToFinish())) {
