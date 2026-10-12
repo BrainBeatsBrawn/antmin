@@ -20,7 +20,95 @@ import craysim.compoundray.eyevisual;
 
 export namespace antbrain
 {
-    template <std::int32_t glver> struct hexvision;
+    /*!
+     * Visualizer and preprocessor for eyes. This code is written on the assumption that you are
+     * using hex-equivalent compound-ray eyes. It takes the raw data in v_ptr->ommatidia_datas and
+     * processes it. Adapt to your application. You may wish to collapse into a mono channel by some
+     * method or apply lateral inhibition or edge detection or some other convolution that is
+     * appropriate for the data. Effectively, this is the first stage of a visual brain model,
+     * processing and visualizing the input signal while it has the retinotopic layout of the eyes.
+     */
+    template <std::int32_t glver>
+    struct hexvision
+    {
+        hexvision (craysim::visual<glver>* vp)
+        {
+            this->v_ptr = vp;
+        }
+
+        void process_mono()
+        {
+            if (this->mono_l.size() != this->sz1) {
+                this->mono_l.resize (this->sz1);
+                this->mono_r.resize (this->sz1);
+            }
+            if (this->v_ptr && this->v_ptr->rdr.eye.get_eye_side() == oces::eye_side::left) {
+                for (std::uint32_t i = 0u; i < this->sz1; ++i) {
+                    // Use blue channel as mono:
+                    this->mono_l[i] = this->v_ptr->ommatidia_datas[0][i][2];
+                    this->mono_r[i] = this->v_ptr->ommatidia_datas[0][this->sz1 + i][2];
+                    // Or the mean luminance:
+                    //this->mono_l[i] = 0.33f * (this->v_ptr->ommatidia_datas[0][i][0] + this->v_ptr->ommatidia_datas[0][i][1] + this->v_ptr->ommatidia_datas[0][i][2]);
+                }
+            } else {
+                for (std::uint32_t i = 0u; i < this->sz1; ++i) {
+                    this->mono_r[i] = this->v_ptr->ommatidia_datas[0][i][2];
+                    this->mono_l[i] = this->v_ptr->ommatidia_datas[0][this->sz1 + i][2];
+                }
+            }
+        }
+
+        void lateral_inhibition()
+        {
+        }
+
+        // Process the raw data in v.ommatiida_datas[0], separating out channels etc and applying any filtering that might fit here
+        void process()
+        {
+            if (this->v_ptr == nullptr) { return; } // must have v_ptr to process
+
+            if (this->two_eyes == false) {
+                std::cerr << "FIXME: Implement two_eyes == false code\n";
+                return;
+            }
+
+            this->sz2 = this->v_ptr->ommatidia_datas[0].size();
+            if (this->sz2 % 2u != 0u) {
+                std::cerr << "sz2 is not even\n";
+                return;
+            }
+            this->sz1 = this->sz2 / 2u;
+
+            // ommatidia_datas[0] is std::vector<std::array<float, 3>> (vector of RGB)
+            // std::vector<std::array<float, 3>>& vod = this->v_ptr->ommatidia_datas[0];
+
+            this->process_mono();
+
+            if (lat_inhib) { this->lateral_inhibition(); }
+        }
+
+        // Number of ommatidia in two eyes
+        std::uint32_t sz2 = 0u;
+        // Number of ommatidia in one eye
+        std::uint32_t sz1 = 0u;
+
+        // Non-owning pointer to the craysim::visual that owns ommatidia_datas. Provides access to OCES hexgrid?
+        craysim::visual<glver>* v_ptr = nullptr;
+
+        // Left eye values. Do I need a copy? left is v_ptr->ommatidia_datas[0][firsthalf] and could/should be a span
+        //std::vector<sm::vec<float, 3>> eye_left_data = {};
+        //std::vector<sm::vec<float, 3>> eye_right_data = {};
+
+        // A monochrome luminance for left and right eyes
+        sm::vvec<float> mono_l = {};
+        sm::vvec<float> mono_r = {};
+
+        // We assume there are two eyes in v_ptr->ommatidia_datas[0], but other systems could have one.
+        bool two_eyes = true;
+
+        // Set true to apply lateral inhibition
+        bool lat_inhib = false;
+    };
 
     // A visualiser class to show eye views.
     template<std::int32_t glver>
@@ -30,15 +118,21 @@ export namespace antbrain
 
         sm::vec<float> grp_offset = {};
 
+        // Make and maintain copies of the eye_hexgrid
+        sm::hexgrid<float> left_eye;
+        sm::hexgrid<float> right_eye;
+
         // Pointer to eyes.
         craysim::compoundray::ommatidia_datamodel<glver>* ep = nullptr;
 
         hexvision_visualizer (craysim::visual<glver>* _v_craysim,
                               mplot::Visual<glver>* _veye,
                               sm::hexgrid<float>* eye_hexgrid,
-                              //hexvision<glver>* _hv,
+                              hexvision<glver>* _hv,
                               sm::vec<float> _grp_offset = {0.0f})
         {
+            this->hv = _hv;
+
             this->grp_offset = _grp_offset;
             if (_v_craysim->sim_opts.test (craysim::options::eye_is_hex) == true) {
                 this->grp_offset += sm::vec<float>{0, 0.6f, 0}; // doublehexgrid plots lower than EyeVisual.
@@ -49,6 +143,7 @@ export namespace antbrain
             // EyeVisual/doublehexgrid constructor
             mflip.pretranslate (this->grp_offset);
 
+            // The eyes are special - they are 'craysim::visual::other_eyes' and will get rendered by craysim::visual::render_and_poll
             if (_v_craysim->sim_opts.test (craysim::options::eye_is_hex) == false) {
                 // EyeVisual can provide a 2D eye representation (on its own, with show_3d = false)
                 auto eyevm2 = std::make_unique<craysim::compoundray::EyeVisual<glver>> (sm::vec<>{},
@@ -73,8 +168,13 @@ export namespace antbrain
                     dhg->set_parent (_veye->get_id());
                     dhg->ommData = &_v_craysim->ommatidia_datas[0];
                     dhg->ommatidia = _v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
-                    dhg->show_flat = true;                  // couple of issues to solve here
-                    dhg->second_grid_flip_lr = true;       // flip the second grid left-right
+                    dhg->show_flat = true;
+                    if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::right) {
+                        dhg->second_grid_flip_lr = true;       // flip the second grid left-right
+                    }
+                    if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::left) {
+                        dhg->first_grid_flip_lr = true;
+                    }
                     dhg->grid_offset = {0.00075f, 0};     // grid offset is applied in opposite senses to each grid
                     dhg->setGamma (0.45f);
                     dhg->twodimensional (twodee);
@@ -86,10 +186,69 @@ export namespace antbrain
                     std::cerr << "eye_is_hex is true, but passed-in eye_hexgrid pointer is null\n";
                 }
             }
+
+            // Rest of the code here *requires* that we have a hex-equivalent eye
+            if (eye_hexgrid == nullptr) { return; }
+
+            this->right_eye = *eye_hexgrid;
+            this->left_eye = *eye_hexgrid;
+
+            std::cout << "eye hexgrid transform is initially:\n" << eye_hexgrid->tfm << std::endl;
+            //sm::mat<float, 4> mirror = sm::mat<float, 4>::reflection (sm::vec<>{}, sm::vec<>::uy());
+            // Copy eye_hexgrid
+            if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::right) {
+                std::cout << "eye_hexgrid is for the right eye\n";
+                // Oddly enough, this means we have to mirror the right eye, not the left, even
+                // though the left eye was created by mirroring the ommatidial position data for the
+                // right eye. That's because we are looking at the back of the eyes.
+
+                // But not like this:
+                //this->right_eye.tfm = mirror * this->right_eye.tfm;
+
+                // We actually need a re-built hexgrid. Maybe do that in OCES?
+
+            } else if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::left) {
+                std::cout << "eye_hexgrid is for the left eye\n";
+            } else {
+                std::cout << "Uh oh\n";
+            }
+
+            // Show monochrome data for each eye (in separate HexGrids now). The user will have to manually render these, I think.
+            auto hg_mono_left = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->left_eye, this->grp_offset + sm::vec<float>{-0.375f, 0.45f, 0});
+            hg_mono_left->set_parent (_veye->get_id());
+            hg_mono_left->cm.setType (mplot::ColourMapType::Ice);
+            hg_mono_left->setScalarData (&this->hv->mono_l);
+            hg_mono_left->hexVisMode = mplot::HexVisMode::HexInterp;
+            hg_mono_left->zScale.null_scaling();
+            hg_mono_left->addLabel ("mono, left", sm::vec<>{ -eye_hexgrid->width() * 1000/2.1f, eye_hexgrid->width() * 1000 / 1.6f }, mplot::TextFeatures(0.02f));
+            hg_mono_left->finalize();
+            this->eye_left_hgv = _veye->addVisualModel (hg_mono_left);
+            this->eye_left_hgv->scaleViewMatrix (1000);
+
+            auto hg_mono_right = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->right_eye, this->grp_offset + sm::vec<float>{0.375f, 0.45f, 0});
+            hg_mono_right->set_parent (_veye->get_id());
+            hg_mono_right->cm.setType (mplot::ColourMapType::Ice);
+            hg_mono_right->setScalarData (&this->hv->mono_r);
+            hg_mono_right->hexVisMode = mplot::HexVisMode::HexInterp;
+            hg_mono_right->zScale.null_scaling();
+            hg_mono_right->addLabel ("mono, right", sm::vec<>{ -eye_hexgrid->width() * 1000/2.1f, eye_hexgrid->width() * 1000 / 1.6f }, mplot::TextFeatures(0.02f));
+            hg_mono_right->finalize();
+            this->eye_right_hgv = _veye->addVisualModel (hg_mono_right);
+            this->eye_right_hgv->scaleViewMatrix (1000);
         }
 
         // Note that when this goes out of scope, the VisualModels will persist in v
         ~hexvision_visualizer() {}
+
+        void render()
+        {
+            if (this->eye_left_hgv != nullptr) {
+                this->eye_left_hgv->reinit(); // reinitColours no good for now.
+            }
+            if (this->eye_right_hgv != nullptr) {
+                this->eye_right_hgv->reinit();
+            }
+        }
 
         // The hexvision object that holds eye data - externally managed memory
         hexvision<glver>* hv = nullptr;
@@ -98,64 +257,4 @@ export namespace antbrain
         mplot::HexGridVisual<float, sm::hexalign::point_up, glver>* eye_left_hgv = nullptr;
         mplot::HexGridVisual<float, sm::hexalign::point_up, glver>* eye_right_hgv = nullptr;
     };
-
-#if 0
-
-    /*!
-     * Visualizer and preprocessor for eyes. This code is written on the assumption that you are
-     * using hex-equivalent compound-ray eyes. It takes the raw data in v_ptr->ommatidia_datas and
-     * processes it. Adapt to your application. You may wish to collapse into a mono channel by some
-     * method or apply lateral inhibition or edge detection or some other convolution that is
-     * appropriate for the data. Effectively, this is the first stage of a visual brain model,
-     * processing and visualizing the input signal while it has the retinotopic layout of the eyes.
-     */
-    template <std::int32_t glver>
-    struct hexvision
-    {
-        hexvision (craysim::visual<glver>* vp)
-        {
-            this->v_ptr = vp;
-        }
-
-        void process_mono()
-        {
-        }
-
-        void lateral_inhibition()
-        {
-        }
-
-        // Process the raw data in v.ommatiida_datas[0], separating out channels etc and applying any filtering that might fit here
-        void process()
-        {
-            // ommatidia_datas[0] is std::vector<std::array<float, 3>> (vector of RGB)
-            std::vector<std::array<float, 3>>& vod = v.ommatidia_datas[0];
-
-            if (st->mono_l.size() != this->n_half_ommatidia) {
-                st->mono_l.resize (this->n_half_ommatidia);
-                st->mono_r.resize (this->n_half_ommatidia);
-            }
-
-            this->process_mono();
-
-            if (lat_inhib) { this->lateral_inhibition(); }
-
-            if (st->gv2p_left != nullptr && v.ommatidia_datas[0].size() > 0) {
-                // Doesn't appear to be necessary to reinit the RGB grid here. What about the scalar (lat inhib) Grid?
-                // Possibly reinitColours calls here, for member visualizers
-            }
-        }
-
-        // Non-owning pointer to the craysim::visual that owns ommatidia_datas. Provides access to OCES hexgrid?
-        craysim::visual<glver>* v_ptr;
-
-        // Left eye values. Do I need a copy? left is v_ptr->ommatidia_datas[0][firsthalf] and could/should be a span
-        std::vector<sm::vec<float, 3>> eye_left_data = {};
-        std::vector<sm::vec<float, 3>> eye_right_data = {};
-
-        // A monochrome luminance for left and right eyes
-        sm::vvec<float> mono_l = {};
-        sm::vvec<float> mono_r = {};
-    };
-#endif
 }

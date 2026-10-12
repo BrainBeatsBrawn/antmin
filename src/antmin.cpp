@@ -101,12 +101,12 @@ std::int32_t main (std::int32_t argc, char* argv[])
     mplot::Visual<antmin::glver> veye (920, 512, "Eye view");
     veye.setSceneTrans (sm::vec<float,3>{ float{-0.00859182}, float{-0.616208}, float{-1.18557} });
     veye.setSceneRotation (sm::quaternion<float>{ float{1}, float{0}, float{0}, float{0} });
-#if 0
-    // We will have (from module antbrain.vision):
-    antbrain::hexvision vision_data (&v, etc);
-#endif
+    // This class (from module antbrain.vision): computes monochrome channels and applys any
+    // filtering to make signals ready for a brain model
+    antbrain::hexvision vision_data (&v);
+
     // Along with (also from module antbrain.vision):
-    antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, v.eye_hexgrid_ptr);
+    antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, v.eye_hexgrid_ptr, &vision_data);
 
     // This is a debug mechanism to replay and study a crashed movement on the NavMesh
     if (v.sim_opts.test (craysim::options::debug_mv)) {
@@ -131,6 +131,9 @@ std::int32_t main (std::int32_t argc, char* argv[])
         v.start_loop_timer(); // It's important to call this line at the start of the loop
 
         v.render_and_poll(); // Does all the render computations
+
+        vision_data.process();
+        eyes_vis.render();
 
         // Here is where you would work on the data for the last view in v.ommatidia_data;
 
