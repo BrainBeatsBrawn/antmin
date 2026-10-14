@@ -127,7 +127,6 @@ export namespace antbrain
 
         hexvision_visualizer (craysim::visual<glver>* _v_craysim,
                               mplot::Visual<glver>* _veye,
-                              sm::hexgrid<float>* eye_hexgrid,
                               hexvision<glver>* _hv,
                               sm::vec<float> _grp_offset = {0.0f})
         {
@@ -163,8 +162,8 @@ export namespace antbrain
                 this->ep->scaleViewMatrix (1000);
             } else {
                 // There can be an optional extra double hex of flat eyes if 'eye_is_hex'
-                if (eye_hexgrid != nullptr) {
-                    auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, sm::vec<>{});
+                if (_v_craysim->rdr.read_success && _v_craysim->rdr.eye_is_hex) {
+                    auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (&_v_craysim->rdr.heye.hg, sm::vec<>{});
                     dhg->set_parent (_veye->get_id());
                     dhg->ommData = &_v_craysim->ommatidia_datas[0];
                     dhg->ommatidia = _v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
@@ -183,55 +182,49 @@ export namespace antbrain
                     this->ep = _veye->addVisualModel (dhg);
                     this->ep->scaleViewMatrix (1000);
                 } else {
-                    std::cerr << "eye_is_hex is true, but passed-in eye_hexgrid pointer is null\n";
+                    std::cerr << "eye_is_hex is true, but craysim's oces reader is not set up as a hex-equivalent eye\n";
                 }
             }
 
             // Rest of the code here *requires* that we have a hex-equivalent eye
-            if (eye_hexgrid == nullptr) { return; }
+            if (!_v_craysim->rdr.read_success || !_v_craysim->rdr.eye_is_hex) { return; }
 
-            this->right_eye = *eye_hexgrid;
-            this->left_eye = *eye_hexgrid;
-
-            std::cout << "eye hexgrid transform is initially:\n" << eye_hexgrid->tfm << std::endl;
-            //sm::mat<float, 4> mirror = sm::mat<float, 4>::reflection (sm::vec<>{}, sm::vec<>::uy());
-            // Copy eye_hexgrid
+            // Copy eye_hexgrids (maybe copy pointers)
             if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::right) {
-                std::cout << "eye_hexgrid is for the right eye\n";
-                // Oddly enough, this means we have to mirror the right eye, not the left, even
-                // though the left eye was created by mirroring the ommatidial position data for the
-                // right eye. That's because we are looking at the back of the eyes.
-
-                // But not like this:
-                //this->right_eye.tfm = mirror * this->right_eye.tfm;
-
-                // We actually need a re-built hexgrid. Maybe do that in OCES?
-
+                std::cout << "main hex hexgrid is for the right eye\n";
+                this->right_eye = _v_craysim->rdr.heye.hg;
+                this->left_eye = _v_craysim->rdr.heye.hg_mirr;
             } else if (_v_craysim->rdr.eye.get_eye_side() == oces::eye_side::left) {
-                std::cout << "eye_hexgrid is for the left eye\n";
+                std::cout << "main hex hexgrid is for the left eye\n";
+                this->left_eye = _v_craysim->rdr.heye.hg;
+                this->right_eye = _v_craysim->rdr.heye.hg_mirr;
             } else {
                 std::cout << "Uh oh\n";
             }
 
             // Show monochrome data for each eye (in separate HexGrids now). The user will have to manually render these, I think.
-            auto hg_mono_left = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->left_eye, this->grp_offset + sm::vec<float>{-0.375f, 0.45f, 0});
+            auto hg_mono_left = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->left_eye, this->grp_offset + sm::vec<float>{-0.375f, -0.5f, 0});
             hg_mono_left->set_parent (_veye->get_id());
+            hg_mono_left->twodimensional (twodee);
             hg_mono_left->cm.setType (mplot::ColourMapType::Ice);
             hg_mono_left->setScalarData (&this->hv->mono_l);
             hg_mono_left->hexVisMode = mplot::HexVisMode::HexInterp;
+            hg_mono_left->reflect_lr(); // so we are looking at the inside of the eye - the ant's view
             hg_mono_left->zScale.null_scaling();
-            hg_mono_left->addLabel ("mono, left", sm::vec<>{ -eye_hexgrid->width() * 1000/2.1f, eye_hexgrid->width() * 1000 / 1.6f }, mplot::TextFeatures(0.02f));
+            hg_mono_left->addLabel ("mono, left", sm::vec<>{ -0.3f, -0.2f }, mplot::TextFeatures(0.02f));
             hg_mono_left->finalize();
             this->eye_left_hgv = _veye->addVisualModel (hg_mono_left);
             this->eye_left_hgv->scaleViewMatrix (1000);
 
-            auto hg_mono_right = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->right_eye, this->grp_offset + sm::vec<float>{0.375f, 0.45f, 0});
+            auto hg_mono_right = std::make_unique<mplot::HexGridVisual<float, sm::hexalign::point_up, glver>> (&this->right_eye, this->grp_offset + sm::vec<float>{0.375f, -0.5f, 0});
             hg_mono_right->set_parent (_veye->get_id());
+            hg_mono_right->twodimensional (twodee);
             hg_mono_right->cm.setType (mplot::ColourMapType::Ice);
             hg_mono_right->setScalarData (&this->hv->mono_r);
             hg_mono_right->hexVisMode = mplot::HexVisMode::HexInterp;
+            hg_mono_right->reflect_lr();
             hg_mono_right->zScale.null_scaling();
-            hg_mono_right->addLabel ("mono, right", sm::vec<>{ -eye_hexgrid->width() * 1000/2.1f, eye_hexgrid->width() * 1000 / 1.6f }, mplot::TextFeatures(0.02f));
+            hg_mono_right->addLabel ("mono, right", sm::vec<>{ 0.2f, -0.2f }, mplot::TextFeatures(0.02f));
             hg_mono_right->finalize();
             this->eye_right_hgv = _veye->addVisualModel (hg_mono_right);
             this->eye_right_hgv->scaleViewMatrix (1000);

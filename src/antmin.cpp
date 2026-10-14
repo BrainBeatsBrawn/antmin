@@ -95,7 +95,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     vant.setSceneTrans (sm::vec<float,3>{ float{0.113123}, float{0.0217872}, float{-3.7961} });
     vant.setSceneRotation (sm::quaternion<float>{ float{0.937372}, float{0.106131}, float{0.330499}, float{0.0289824} });
     // Use a visualizer class to bundle up the work of drawing the ant
-    antbody::visualizer<antmin::glver> antbody_vis (&v, &vant, v.eye_hexgrid_ptr);
+    antbody::visualizer<antmin::glver> antbody_vis (&v, &vant);
 
     // Make a third window for views of the eyes on their own
     mplot::Visual<antmin::glver> veye (920, 512, "Eye view");
@@ -106,7 +106,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     antbrain::hexvision vision_data (&v);
 
     // Along with (also from module antbrain.vision):
-    antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, v.eye_hexgrid_ptr, &vision_data);
+    antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, &vision_data);
 
     // This is a debug mechanism to replay and study a crashed movement on the NavMesh
     if (v.sim_opts.test (craysim::options::debug_mv)) {

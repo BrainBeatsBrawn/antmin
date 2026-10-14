@@ -28,12 +28,11 @@ export namespace antbody
         // Pointer to the eye visualmodel
         craysim::compoundray::ommatidia_datamodel<glver>* ep1 = nullptr;
 
-        visualizer (craysim::visual<glver>* v_craysim, mplot::Visual<glver>* vant, sm::hexgrid<float>* eye_hexgrid)
+        visualizer (craysim::visual<glver>* v_craysim, mplot::Visual<glver>* vant)
         {
-            // Could get eye_hexgrid from v_craysim
-
-            if (v_craysim->sim_opts.test (craysim::options::eye_is_hex) && eye_hexgrid != nullptr) {
-                auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (eye_hexgrid, sm::vec<>{});
+            if (v_craysim->sim_opts.test (craysim::options::eye_is_hex)
+                && v_craysim->rdr.read_success && v_craysim->rdr.eye_is_hex) {
+                auto dhg = std::make_unique<craysim::doublehexgrid<glver>> (&v_craysim->rdr.heye.hg, sm::vec<>{});
                 dhg->set_parent (vant->get_id());
                 dhg->ommData = &v_craysim->ommatidia_datas[0];
                 dhg->ommatidia = v_craysim->get_ommatidia_ptr(0); // gets repeatedly reset in craysim_visual
