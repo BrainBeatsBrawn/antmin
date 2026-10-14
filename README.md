@@ -183,6 +183,14 @@ The usual gaming 'wasd' keys move her forwards/backwards, left and right. Change
 
 A summary of all the key bindings is available if you press Ctrl-h (you will see the output in the terminal from which you started the program).
 
+If you want to pipe the input into a brain model, you probably want to use the 'hexagonal equivalent eye' feature in `oces::reader` from [oces_viewer](https://github.com/BrainBeatsBrawn/oces_viewer). To see this in action, you can run:
+
+```bash
+./build/antmin -f ./data/natural_env.gltf -C ./data/eyes/velox-head.gltf,hex
+```
+This loads ./data/eyes/velox-head.gltf as the main camera, with the ',hex' specifying that you wish to convert the experimental eye data into a 'hexagonal equivalent eye' by fitting a hexgrid to the measured locations of the ommatidia.
+
+
 ## Make your own Insect POV
 
 The antmin program, with its ant- and application-specific functionality is only a few hundred lines of code.
