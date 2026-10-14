@@ -104,6 +104,7 @@ std::int32_t main (std::int32_t argc, char* argv[])
     // This class (from module antbrain.vision): computes monochrome channels and applys any
     // filtering to make signals ready for a brain model
     antbrain::hexvision vision_data (&v);
+    vision_data.lat_inhib = true;
 
     // Along with (also from module antbrain.vision):
     antbrain::hexvision_visualizer<antmin::glver> eyes_vis (&v, &veye, &vision_data);
