@@ -248,7 +248,7 @@ export namespace antbrain
             hg_mono_left->cm.setType (mplot::ColourMapType::Ice);
             hg_mono_left->setScalarData (&this->hv->mono_l);
             hg_mono_left->hexVisMode = mplot::HexVisMode::HexInterp;
-            hg_mono_left->reflect_lr(); // so we are looking at the inside of the eye - the ant's view
+            hg_mono_left->reflect_x(); // so we are looking at the inside of the eye - the ant's view
             hg_mono_left->zScale.null_scaling();
             hg_mono_left->addLabel ("mono, left", sm::vec<>{ -0.3f, -0.2f }, mplot::TextFeatures(0.02f));
             hg_mono_left->finalize();
@@ -261,7 +261,7 @@ export namespace antbrain
             hg_mono_right->cm.setType (mplot::ColourMapType::Ice);
             hg_mono_right->setScalarData (&this->hv->mono_r);
             hg_mono_right->hexVisMode = mplot::HexVisMode::HexInterp;
-            hg_mono_right->reflect_lr();
+            hg_mono_right->reflect_x();
             hg_mono_right->zScale.null_scaling();
             hg_mono_right->addLabel ("mono, right", sm::vec<>{ 0.2f, -0.2f }, mplot::TextFeatures(0.02f));
             hg_mono_right->finalize();
@@ -275,7 +275,7 @@ export namespace antbrain
                 hg_left->cm.setType (mplot::ColourMapType::Plasma);
                 hg_left->setScalarData (&this->hv->inhib_l);
                 hg_left->hexVisMode = mplot::HexVisMode::HexInterp;
-                hg_left->reflect_lr(); // so we are looking at the inside of the eye - the ant's view
+                hg_left->reflect_x(); // so we are looking at the inside of the eye - the ant's view
                 hg_left->zScale.null_scaling();
                 hg_left->addLabel ("lat. inhib.", sm::vec<>{ -0.3f, -0.2f }, mplot::TextFeatures(0.02f));
                 hg_left->finalize();
@@ -288,7 +288,7 @@ export namespace antbrain
                 hg_right->cm.setType (mplot::ColourMapType::Plasma);
                 hg_right->setScalarData (&this->hv->inhib_r);
                 hg_right->hexVisMode = mplot::HexVisMode::HexInterp;
-                hg_right->reflect_lr();
+                hg_right->reflect_x();
                 hg_right->zScale.null_scaling();
                 hg_right->finalize();
                 this->inhib_right_hgv = _veye->addVisualModel (hg_right);
